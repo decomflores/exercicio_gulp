@@ -1,3 +1,4 @@
+// Importar os módulos
 const gulp = require('gulp');
 const sass = require('gulp-sass')(require('sass'));
 const uglify = require('gulp-uglify');
@@ -5,58 +6,54 @@ const sourcemaps = require('gulp-sourcemaps');
 
 // Caminhos dos arquivos
 const paths = {
-    styles: {
-        src: './source/styles/**/*.scss',
-        dest: './build/styles/'
-    },
-    scripts: {
-        src: './source/scripts/**/*.js',
-        dest: './build/scripts/'
+    sass: {
+        src: 'source/styles/*.scss',
+        dest: 'build/styles'
     },
     images: {
-        src: './source/images/*',
-        dest: './build/images/'
+        src: 'source/images/*.{jpg,jpeg,png,gif,svg}',
+        dest: 'build/images'
+    },
+    js: {
+        src: 'source/scripts/*.js',
+        dest: 'build/scripts'
     }
 };
 
+// Função assíncrona para comprimir imagens
+async function compressImages() {
+    const imagemin = (await import('gulp-imagemin')).default;
+    return gulp.src(paths.images.src)
+        .pipe(imagemin())
+        .pipe(gulp.dest(paths.images.dest));
+}
+
 // Tarefa para compilar o SASS
-function compilaSass() {
-    return gulp.src(paths.styles.src)
-        .pipe(sourcemaps.init())
+function compileSass() {
+    return gulp.src(paths.sass.src)
         .pipe(sass({ outputStyle: 'compressed' }).on('error', sass.logError))
-        .pipe(sourcemaps.write('./maps'))
-        .pipe(gulp.dest(paths.styles.dest));
+        .pipe(gulp.dest(paths.sass.dest));
 }
 
-// Tarefa para compressão de imagens usando import()
-function comprimeImagens() {
-    return import('gulp-imagemin').then(imagemin => {
-        return gulp.src(paths.images.src)
-            .pipe(imagemin.default())
-            .pipe(gulp.dest(paths.images.dest));
-    });
-}
-
-// Tarefa para compressão de JavaScript
-function comprimeJS() {
-    return gulp.src(paths.scripts.src)
-        .pipe(sourcemaps.init())
+// Tarefa para comprimir o código JavaScript
+function compressJs() {
+    return gulp.src(paths.js.src)
         .pipe(uglify())
-        .pipe(sourcemaps.write('./maps'))
-        .pipe(gulp.dest(paths.scripts.dest));
+        .pipe(gulp.dest(paths.js.dest));
 }
 
-// Monitorando mudanças nos arquivos
-function watch() {
-    gulp.watch(paths.styles.src, compilaSass);
-    gulp.watch(paths.scripts.src, comprimeJS);
-    gulp.watch(paths.images.src, comprimeImagens);
+// Tarefa para observar mudanças
+function watchFiles() {
+    gulp.watch(paths.sass.src, compileSass);
+    gulp.watch(paths.images.src, compressImages);
+    gulp.watch(paths.js.src, compressJs);
 }
 
-// Exportando as tarefas
-exports.compilaSass = compilaSass;
-exports.comprimeImagens = comprimeImagens;
-exports.comprimeJS = comprimeJS;
-exports.watch = watch;
+// Exportar as tarefas
+exports.compileSass = compileSass;
+exports.compressImages = compressImages;
+exports.compressJs = compressJs;
+exports.watch = gulp.series(compileSass, compressImages, compressJs, watchFiles);
 
-exports.default = gulp.series(compilaSass, comprimeImagens, comprimeJS, watch);
+// Tarefa padrão (default)
+exports.default = exports.watch;
